@@ -339,13 +339,15 @@ const TELEGRAM_GROUPS = [
 let targetTgLink = '';
 let isSubmitting = false;
 
-// 已增加防缓存逻辑，每次查询都实时拉取最新数据库数据
+// 1. 完全禁用缓存，每次全新请求数据库
 async function getUserRecordByPhone(phone) {
   try {
     const query = encodeURIComponent(`phone=eq.${phone}`);
     const timestamp = Date.now();
     const url = `${API_URL}?${query}&_t=${timestamp}`;
+    // 强制不缓存
     const res = await fetch(url, {
+      cache: "no-store",
       headers: {
         "apikey": SUPABASE_KEY,
         "Authorization": `Bearer ${SUPABASE_KEY}`,
@@ -356,35 +358,44 @@ async function getUserRecordByPhone(phone) {
     });
     if (!res.ok) return null;
     const data = await res.json();
+    console.log("实时数据库返回：", data);
     if (Array.isArray(data) && data.length > 0) return data[0];
     return null;
   } catch (err) {
+    console.error("查询失败：", err);
     return null;
   }
 }
 
 async function submitData() {
-  let btn = document.getElementById("submitBtn");
-  let name = document.getElementById("username").value.trim();
-  let phone = document.getElementById("userphone").value.trim();
-  let email = document.getElementById("useremail").value.trim();
-  let phoneInput = document.getElementById("userphone");
-  let phoneErr = document.getElementById("phoneError");
-  let emailInput = document.getElementById("useremail");
-  let emailErr = document.getElementById("emailError");
+  // 防重复点击锁，直接拦截重复点击
   if (isSubmitting) return;
+  const btn = document.getElementById("submitBtn");
+  const name = document.getElementById("username").value.trim();
+  const phone = document.getElementById("userphone").value.trim();
+  const email = document.getElementById("useremail").value.trim();
+
+  const phoneInput = document.getElementById("userphone");
+  const phoneErr = document.getElementById("phoneError");
+  const emailInput = document.getElementById("useremail");
+  const emailErr = document.getElementById("emailError");
+
+  // 初始化状态
   isSubmitting = true;
   btn.disabled = true;
   phoneInput.classList.remove("error");
   phoneErr.innerText = "";
   emailInput.classList.remove("error");
   emailErr.innerText = "";
+
+  // 表单空校验
   if (!name || !phone || !email) {
     alert("Please fill out all required fields.");
     isSubmitting = false;
     btn.disabled = false;
     return;
   }
+  // 手机号校验
   if (!/^[0-9]{10}$/.test(phone)) {
     phoneInput.classList.add("error");
     phoneErr.innerText = "Please enter a valid mobile number";
@@ -392,6 +403,7 @@ async function submitData() {
     btn.disabled = false;
     return;
   }
+  // 邮箱校验
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     emailInput.classList.add("error");
     emailErr.innerText = "Please enter a valid email address";
@@ -399,8 +411,11 @@ async function submitData() {
     btn.disabled = false;
     return;
   }
+
+  // 2. 强制等待查重完成，拿到真实数据再判断
   const userRecord = await getUserRecordByPhone(phone);
   if (userRecord) {
+    // 已有记录，不新增，直接跳转旧群
     targetTgLink = userRecord.tg_group_url;
     document.getElementById("modalTitle").innerText = "You Have Submitted Before";
     document.getElementById("modalDesc").innerText = "We found your previous submission, click Join Now to go to your original Telegram group.";
@@ -409,10 +424,12 @@ async function submitData() {
     btn.disabled = false;
     return;
   }
+
+  // 全新用户，分配群组并入库
   const randomIndex = Math.floor(Math.random() * TELEGRAM_GROUPS.length);
   targetTgLink = TELEGRAM_GROUPS[randomIndex];
   try {
-    let resp = await fetch(API_URL, {
+    const resp = await fetch(API_URL, {
       method: "POST",
       headers: {
         "apikey": SUPABASE_KEY,
@@ -421,9 +438,9 @@ async function submitData() {
         "Prefer": "return=minimal"
       },
       body: JSON.stringify({
-        name: name,
-        phone: phone,
-        email: email,
+        name,
+        phone,
+        email,
         tg_group_url: targetTgLink
       })
     });
@@ -441,6 +458,7 @@ async function submitData() {
     btn.disabled = false;
   }
 }
+
 document.getElementById("goToTgBtn").onclick = function () {
   window.location.href = targetTgLink;
 };
