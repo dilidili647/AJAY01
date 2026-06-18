@@ -371,19 +371,27 @@ const TELEGRAM_GROUPS = [
 let targetTgLink = '';
 let isSubmitting = false;
 
+// 修复完毕的查重函数，适配刚创建的SELECT权限
 async function checkPhone(phone) {
   try {
-    let url = API_URL + "?phone=eq." + phone;
-    let res = await fetch(url, {
+    const query = encodeURIComponent(`phone=eq.${phone}`);
+    const url = `${API_URL}?${query}`;
+    const res = await fetch(url, {
       headers: {
         "apikey": SUPABASE_KEY,
-        "Authorization": "Bearer " + SUPABASE_KEY
+        "Authorization": `Bearer ${SUPABASE_KEY}`
       }
     });
-    let json = await res.json();
-    return json.length > 0;
-  } catch (e) {
-    console.log(e);
+
+    if (!res.ok) {
+      console.error("Phone check request failed, status code:", res.status);
+      return false;
+    }
+    const data = await res.json();
+    console.log("Duplicate check raw data:", data, "matched count:", data.length);
+    return Array.isArray(data) && data.length > 0;
+  } catch (err)
+    console.error("Phone check fetch error:", err);
     return false;
   }
 }
@@ -458,7 +466,7 @@ async function submitData() {
     } else {
       alert("Submission failed. Please try again later.");
     }
-  } catch (err) {
+  } catch (err)
     alert("Network connection error, please check your internet and retry.");
   } finally {
     isSubmitting = false;
