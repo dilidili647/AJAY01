@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AJAY UPI</title>
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background: #0A101F;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .top-bar {
+            background: #000;
+            padding: 5px 0;
+            width: 100%;
+            position: relative;
+            z-index: 10;
+        }
+        .scroll-text {
+            white-space: nowrap;
+            color: #00FF88;
+            font-size: 14px;
+            animation: scroll 15s linear infinite;
+            padding-left: 100%;
+        }
+        @keyframes scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .hero-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            background: #0A101F;
+        }
+        .hero-box {
+            position: relative;
+            width: 900px;
+            height: 450px;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+        .hero-video {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+        .hero-box::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            background: linear-gradient(to right, #0A101F 0%, transparent 20%, transparent 100%);
+        }
+
+        .hero-text {
+            position: absolute;
+            top: 90px;
+            left: 90px;
+            z-index: 3;
+        }
+        .hero-text .logo {
+            font-size: 60px;
+            color: #00FF88;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #000;
+        }
+        .hero-text .slogan {
+            font-size: 26px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 8px #000;
+        }
+        .hero-text .cashback {
+            font-size: 22px;
+            font-weight: 500;
+            text-shadow: 0 0 8px #000;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            left: 50%;
+            bottom: 50px;
+            z-index: 999;
+            cursor: pointer;
+        }
+        .scroll-indicator i {
+            font-size: 36px;
+            color: #00FF88;
+            animation: bounce 2s infinite ease-in-out;
+            display: block;
+        }
+        @keyframes bounce {
+            0%,100% { transform: translateY(0); }
+            50% { transform: translateY(10px); }
+        }
+
+        .bonus-section,
+        .section,
+        .form-section {
+            width: 900px;
+            margin: 0 auto;
+            padding: 0;
+        }
+        .bonus-section { margin-top: 30px; }
+        .section { margin-top: 20px; }
+        .form-section { margin-top: 40px; }
+
+        .title {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: #111A2F;
+            padding: 22px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .card.green {
+            border-left: 4px solid #00FF88;
+        }
+        .card ul {
+            list-style: none;
+            margin-top: 10px;
+        }
+        .card li {
+            padding: 4px 0;
+            font-size: 15px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-card {
+            background: #111A2F;
+            padding: 35px 30px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .form-card h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 22px;
+        }
+        .form-card input {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 6px;
+            background: #0A101F;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+        }
+        .form-card input.error {
+            border-color: #ff4444;
+            background: rgba(255,68,68,0.05);
+        }
+        .error-text {
+            color: #ff4444;
+            font-size: 12px;
+            height: 16px;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: #00FF88;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+        .submit-btn:hover {
+            background: #00CC66;
+        }
+        .submit-btn:disabled {
+            background: #009955;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px 20px;
+            font-size: 13px;
+            color: #888;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            margin-top: 30px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .modal-box {
+            background: #111A2F;
+            width: 90%;
+            max-width: 420px;
+            padding: 40px 30px;
+            border-radius: 14px;
+            border: 1px solid rgba(0,255,136,0.2);
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity:0; transform: translateY(-20px); }
+            to { opacity:1; transform: translateY(0); }
+        }
+        .modal-box h3 {
+            color: #00FF88;
+            margin-bottom: 16px;
+            font-size: 22px;
+        }
+        .modal-box p {
+            color: #fff;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .modal-btn {
+            background: #00FF88;
+            color: #000;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+        .modal-btn:hover {
+            background: #00CC66;
+        }
+
+        @media (max-width:920px) {
+            .hero-box,
+            .bonus-section,
+            .section,
+            .form-section {
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="scroll-text">
+        User Mahesh earned ₹53,880 • User Sita earned ₹13,023 • User Rahul earned ₹53,880 • New users get 200₹ bonus
+    </div>
+</div>
+
+<div class="hero-wrapper">
+    <div class="hero-box">
+        <video class="hero-video" autoplay muted loop playsinline>
+            <source src="background.mp4" type="video/mp4">
+        </video>
+
+        <div class="hero-text">
+            <h1 class="logo">AJAY UPI</h1>
+            <p class="slogan">Trusted & Stable Platform</p>
+            <p class="cashback">Minimum Recharge Cashback 3.5%</p>
+        </div>
+
+        <div class="scroll-indicator" onclick="scrollToForm()">
+            <i class="fas fa-chevron-down"></i>
+        </div>
+    </div>
+</div>
+
+<div class="bonus-section">
+    <h2 class="title">🔥 Daily Bonus Activity</h2>
+    <div class="card">
+        <p>Daily Personal Purchase Rewards</p>
+        <ul>
+            <li>10,000 ₹ → 500 ₹</li>
+            <li>20,000 ₹ → 1,200 ₹</li>
+            <li>30,000 ₹ → 2,000 ₹</li>
+            <li>50,000 ₹ → 3,500 ₹</li>
+            <li>100,000 ₹ → 7,500 ₹</li>
+        </ul>
+    </div>
+    <div class="card green">
+        <h3>New User Bonus</h3>
+        <p>Deposit 1000 ₹ → Get 200 ₹ Reward</p>
+    </div>
+</div>
+
+<div class="section">
+    <h2 class="title">Why Choose AJAY UPI</h2>
+    <div class="grid">
+        <div class="card">⚡ UPI Instant Transaction</div>
+        <div class="card">🛡️ Stable & Safe System</div>
+        <div class="card">👨‍💻 24/7 Customer Service</div>
+        <div class="card">🎁 Regular Cashback</div>
+    </div>
+</div>
+
+<div id="form" class="form-section">
+    <div class="form-card">
+        <h2>Register & Get 3.5% Cashback</h2>
+        <input type="text" id="username" placeholder="Full Name">
+        <span class="error-text"></span>
+
+        <input type="tel" id="userphone" placeholder="10-digit WhatsApp Number">
+        <span class="error-text" id="phoneError"></span>
+
+        <input type="email" id="useremail" placeholder="Email Address">
+        <span class="error-text" id="emailError"></span>
+
+        <button class="submit-btn" id="submitBtn" onclick="submitData()">JOIN NOW & CLAIM BONUS</button>
+    </div>
+</div>
+
+<footer>© 2025 AJAY UPI. All Rights Reserved.</footer>
+
+<div class="modal-overlay" id="successModal">
+    <div class="modal-box">
+        <h3>✅ Submitted Successfully</h3>
+        <p>感谢你的提交，现在点击立即加入即可领取你的专属福利和专属客服</p>
+        <button class="modal-btn" id="goToTgBtn">立即加入</button>
+    </div>
+</div>
+
+<script>
+const API_URL = 'https://qfmyvgowvhzjpgormpyf.supabase.co/rest/v1/leads';
+const SUPABASE_KEY = 'sb_publishable_YHwXVJZyaFYJfx2pW7WCEg_EX4WlVc5';
+
+const TELEGRAM_GROUPS = [
+    'https://t.me/+2NrdvbHHuMk2OWU1',
+    'https://t.me/+GatBejDsIsphOWQ1',
+    'https://t.me/+poeifPP9RkgzMDk0',
+    'https://t.me/+js9lLPfAN5wzNmFl'
+];
+
+let targetTgLink = '';
+let isSubmitting = false;
+
+// ==============================================
+// ✅ 绝对稳定：查询手机号是否已注册（修复完成）
+// ==============================================
+async function checkPhone(phone) {
+  try {
+    let url = API_URL + "?phone=eq." + phone;
+    let res = await fetch(url, {
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+      }
+    });
+    let json = await res.json();
+    return json.length > 0;
+  } catch (e) {
+    console.log(e);
+    return false;
+  }
+}
+
+async function submitData() {
+  let btn = document.getElementById("submitBtn");
+  let name = document.getElementById("username").value.trim();
+  let phone = document.getElementById("userphone").value.trim();
+  let email = document.getElementById("useremail").value.trim();
+
+  let phoneInput = document.getElementById("userphone");
+  let phoneErr = document.getElementById("phoneError");
+  let emailInput = document.getElementById("useremail");
+  let emailErr = document.getElementById("emailError");
+
+  // 防重复点击
+  if (isSubmitting) return;
+  isSubmitting = true;
+  btn.disabled = true;
+
+  // 清空错误
+  phoneInput.classList.remove("error");
+  phoneErr.innerText = "";
+  emailInput.classList.remove("error");
+  emailErr.innerText = "";
+
+  // 非空
+  if (!name || !phone || !email) {
+    alert("Please fill in all fields.");
+    isSubmitting = false;
+    btn.disabled = false;
+    return;
+  }
+
+  // 手机号验证
+  if (!/^[0-9]{10}$/.test(phone)) {
+    phoneInput.classList.add("error");
+    phoneErr.innerText = "请输入正确的手机号";
+    isSubmitting = false;
+    btn.disabled = false;
+    return;
+  }
+
+  // 邮箱验证
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    emailInput.classList.add("error");
+    emailErr.innerText = "请输入正确的邮箱地址";
+    isSubmitting = false;
+    btn.disabled = false;
+    return;
+  }
+
+  // ==========================================
+  // ✅ 重复检测（最终稳定版）
+  // ==========================================
+  let exists = await checkPhone(phone);
+  if (exists) {
+    alert("你已经提交过了，请勿重复提交！");
+    isSubmitting = false;
+    btn.disabled = false;
+    return;
+  }
+
+  // 提交
+  try {
+    let resp = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({ name, phone, email })
+    });
+
+    if (resp.ok) {
+      let idx = Math.floor(Math.random() * TELEGRAM_GROUPS.length);
+      targetTgLink = TELEGRAM_GROUPS[idx];
+      document.getElementById("successModal").style.display = "flex";
+    } else {
+      alert("Submission failed. Please try again.");
+    }
+  } catch (err) {
+    alert("Network Error. Please try again.");
+  } finally {
+    isSubmitting = false;
+    btn.disabled = false;
+  }
+}
+
+document.getElementById("goToTgBtn").onclick = function () {
+  window.location.href = targetTgLink;
+};
+
+function scrollToForm() {
+  document.getElementById("form").scrollIntoView({ behavior: "smooth" });
+}
+</script>
+
+</body>
+</html>

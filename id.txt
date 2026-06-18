@@ -1,0 +1,12 @@
+ const API_URL = 'https://qfmyvgowvhzjpgormpyf.supabase.co/rest/v1/leads';
+        
+        // ⚠️ 请在这里粘贴你测试成功的 Supabase 极长密钥 (anon public)
+        const SUPABASE_KEY = 'sb_publishable_YHwXVJZyaFYJfx2pW7WCEg_EX4WlVc5'; 
+
+        // 🌟 核心分流系统：在这里配置你不同的 Telegram 群组链接
+        const TELEGRAM_GROUPS = [
+            'https://t.me/+2NrdvbHHuMk2OWU1',
+            'https://t.me/+GatBejDsIsphOWQ1',
+            'https://t.me/+poeifPP9RkgzMDk0',
+            'https://t.me/+js9lLPfAN5wzNmFl'
+        ];
