@@ -339,13 +339,12 @@ const TELEGRAM_GROUPS = [
 let targetTgLink = '';
 let isSubmitting = false;
 
-// 1. 完全禁用缓存，每次全新请求数据库
+// 完全禁用缓存，每次实时查询数据库最新数据
 async function getUserRecordByPhone(phone) {
   try {
     const query = encodeURIComponent(`phone=eq.${phone}`);
-    const timestamp = Date.now();
-    const url = `${API_URL}?${query}&_t=${timestamp}`;
-    // 强制不缓存
+    const ts = Date.now();
+    const url = `${API_URL}?${query}&_t=${ts}`;
     const res = await fetch(url, {
       cache: "no-store",
       headers: {
@@ -358,17 +357,16 @@ async function getUserRecordByPhone(phone) {
     });
     if (!res.ok) return null;
     const data = await res.json();
-    console.log("实时数据库返回：", data);
-    if (Array.isArray(data) && data.length > 0) return data[0];
-    return null;
+    console.log("实时数据库数据：", data);
+    return Array.isArray(data) && data.length > 0 ? data[0] : null;
   } catch (err) {
-    console.error("查询失败：", err);
+    console.error("查询接口异常", err);
     return null;
   }
 }
 
 async function submitData() {
-  // 防重复点击锁，直接拦截重复点击
+  // 重复点击直接拦截
   if (isSubmitting) return;
   const btn = document.getElementById("submitBtn");
   const name = document.getElementById("username").value.trim();
@@ -380,7 +378,7 @@ async function submitData() {
   const emailInput = document.getElementById("useremail");
   const emailErr = document.getElementById("emailError");
 
-  // 初始化状态
+  // 锁定提交状态
   isSubmitting = true;
   btn.disabled = true;
   phoneInput.classList.remove("error");
@@ -388,14 +386,13 @@ async function submitData() {
   emailInput.classList.remove("error");
   emailErr.innerText = "";
 
-  // 表单空校验
+  // 表单基础校验
   if (!name || !phone || !email) {
     alert("Please fill out all required fields.");
     isSubmitting = false;
     btn.disabled = false;
     return;
   }
-  // 手机号校验
   if (!/^[0-9]{10}$/.test(phone)) {
     phoneInput.classList.add("error");
     phoneErr.innerText = "Please enter a valid mobile number";
@@ -403,7 +400,6 @@ async function submitData() {
     btn.disabled = false;
     return;
   }
-  // 邮箱校验
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     emailInput.classList.add("error");
     emailErr.innerText = "Please enter a valid email address";
@@ -412,11 +408,11 @@ async function submitData() {
     return;
   }
 
-  // 2. 强制等待查重完成，拿到真实数据再判断
-  const userRecord = await getUserRecordByPhone(phone);
-  if (userRecord) {
-    // 已有记录，不新增，直接跳转旧群
-    targetTgLink = userRecord.tg_group_url;
+  // 第一步：先查重，必须等查询完成再往下走
+  const existUser = await getUserRecordByPhone(phone);
+  if (existUser) {
+    // 手机号已存在，弹窗跳转原有群组，不新增数据
+    targetTgLink = existUser.tg_group_url;
     document.getElementById("modalTitle").innerText = "You Have Submitted Before";
     document.getElementById("modalDesc").innerText = "We found your previous submission, click Join Now to go to your original Telegram group.";
     document.getElementById("successModal").style.display = "flex";
@@ -425,10 +421,12 @@ async function submitData() {
     return;
   }
 
-  // 全新用户，分配群组并入库
-  const randomIndex = Math.floor(Math.random() * TELEGRAM_GROUPS.length);
-  targetTgLink = TELEGRAM_GROUPS[randomIndex];
+  // 第二步：无重复，分配TG群组
+  const randomIdx = Math.floor(Math.random() * TELEGRAM_GROUPS.length);
+  targetTgLink = TELEGRAM_GROUPS[randomIdx];
+
   try {
+    // 提交写入数据库
     const resp = await fetch(API_URL, {
       method: "POST",
       headers: {
@@ -444,24 +442,39 @@ async function submitData() {
         tg_group_url: targetTgLink
       })
     });
-    if (resp.ok) {
-      document.getElementById("modalTitle").innerText = "✅ Submission Successful";
-      document.getElementById("modalDesc").innerText = "Thank you for your submission. Click Join Now to receive exclusive rewards and dedicated customer support.";
-      document.getElementById("successModal").style.display = "flex";
-    } else {
-      alert("Submission failed. Please try again later.");
+
+    // 捕获数据库唯一索引冲突（兜底防护，前端漏判时触发）
+    if (!resp.ok) {
+      const errData = await resp.json();
+      // 唯一约束冲突报错码
+      if (errData?.code === "23505") {
+        alert("This phone number has already been registered, please use another number.");
+        isSubmitting = false;
+        btn.disabled = false;
+        return;
+      }
+      throw new Error("提交失败");
     }
+
+    // 提交成功，弹出加入群组弹窗
+    document.getElementById("modalTitle").innerText = "✅ Submission Successful";
+    document.getElementById("modalDesc").innerText = "Thank you for your submission. Click Join Now to receive exclusive rewards and dedicated customer support.";
+    document.getElementById("successModal").style.display = "flex";
   } catch (err) {
     alert("Network connection error, please check your internet and retry.");
   } finally {
+    // 无论成功失败都解锁按钮
     isSubmitting = false;
     btn.disabled = false;
   }
 }
 
+// 弹窗跳转TG
 document.getElementById("goToTgBtn").onclick = function () {
   window.location.href = targetTgLink;
 };
+
+// 滚动到表单
 function scrollToForm() {
   document.getElementById("form").scrollIntoView({ behavior: "smooth" });
 }
