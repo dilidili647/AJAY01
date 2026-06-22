@@ -1,249 +1,353 @@
-const API_URL = 'https://qfmyvgowvhzjpgormpyf.supabase.co/rest/v1/leads';
-const SUPABASE_KEY = 'sb_publishable_YHwXVJZyaFYJfx2pW7WCEg_EX4WlVc5';
-const TELEGRAM_GROUPS = [
-    'https://t.me/+2NrdvbHHuMk2OWU1',
-    'https://t.me/+GatBejDsIsphOWQ1',
-    'https://t.me/+poeifPP9RkgzMDk0',
-    'https://t.me/+js9lLPfAN5wzNmFl'
-];
-let targetTgLink = '';
-let isSubmitting = false;
-
-// 标准Supabase请求头，缺一不可
-function getBaseHeaders() {
-    return {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
-    }
+/* ========== 全局基础变量（苹果浅色主题规范） ========== */
+:root {
+  --bg-main: #ffffff;
+  --bg-card: #f5f5f7;
+  --text-main: #1d1d1f;
+  --text-sub: #424245;
+  --text-light: #86868b;
+  --brand-blue: #0071e3;
+  --border-light: rgba(0, 0, 0, 0.12);
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --transition-normal: all 0.28s ease;
 }
 
-// 读取全部数据，无多余缓存参数，纯标准GET
-async function findUserByPhone(inputPhone) {
-    try {
-        const res = await fetch(API_URL, {
-            headers: getBaseHeaders(),
-            cache: "no-cache"
-        });
-        const rawText = await res.text();
-        console.log("接口原始返回：", res.status, rawText);
-        if (!res.ok) throw new Error(`status:${res.status}`);
-        const list = JSON.parse(rawText);
-        // 精确匹配手机号字符串
-        return list.find(row => String(row.phone) === String(inputPhone)) || null;
-    } catch (err) {
-        console.error("查询失败详情：", err);
-        return null;
-    }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-function unlockBtn() {
-    isSubmitting = false;
-    document.getElementById('submitBtn').disabled = false;
+html {
+  scroll-behavior: smooth;
 }
 
-// 查到旧数据弹窗（展示原有群组）
-function showOldGroupModal(groupUrl) {
-    targetTgLink = groupUrl;
-    document.getElementById('modalTitle').innerText = "You Have Submitted Before";
-    document.getElementById('modalDesc').innerText = "Your original group link has been loaded, click Join Now to enter.";
-    document.getElementById('successModal').style.display = "flex";
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+  overflow-x: hidden;
+  line-height: 1.48;
 }
 
-// 查询失败兜底弹窗
-function showRepeatTipModal() {
-    targetTgLink = "";
-    document.getElementById('modalTitle').innerText = "You Have Submitted Before";
-    document.getElementById('modalDesc').innerText = "This phone number already exists, refresh page to load your group link.";
-    document.getElementById('successModal').style.display = "flex";
+/* ========== 顶部滚动横幅 浅灰底色 ========== */
+.top-bar {
+  background-color: #f0f0f2;
+  padding: 6px 0;
+  width: 100%;
+}
+.scroll-text {
+  white-space: nowrap;
+  color: var(--text-light);
+  font-size: 13px;
+  animation: scroll 18s linear infinite;
+  padding-left: 100%;
+}
+@keyframes scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
 }
 
-// 新用户成功弹窗
-function showNewSuccessModal() {
-    document.getElementById('modalTitle').innerText = "✅ Submission Successful";
-    document.getElementById('modalDesc').innerText = "Your registration completed, click Join Now to open your assigned Telegram group.";
-    document.getElementById("successModal").style.display = "flex";
+/* ========== Hero 首屏全屏区块 ========== */
+.hero-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  background: var(--bg-main);
+  padding: 40px 0;
+}
+.hero-box {
+  position: relative;
+  width: min(920px, 94%);
+  height: 460px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  transition: transform 0.1s ease-out;
+}
+.hero-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+.hero-box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(to top, #fff 0%, rgba(255,255,255,0.9) 10%, rgba(255,255,255,0.6) 20%, transparent 35%);
 }
 
-async function submitData() {
-    if (isSubmitting) return;
-    const submitBtn = document.getElementById("submitBtn");
-    const name = document.getElementById("username").value.trim();
-    const phone = document.getElementById("userphone").value.trim();
-    const email = document.getElementById("useremail").value.trim();
-
-    const phoneInput = document.getElementById("userphone");
-    const phoneErr = document.getElementById("phoneError");
-    const emailInput = document.getElementById("useremail");
-    const emailErr = document.getElementById("emailError");
-
-    phoneInput.classList.remove("error");
-    phoneErr.innerText = "";
-    emailInput.classList.remove("error");
-    emailErr.innerText = "";
-
-    // 表单校验
-    if (!name || !phone || !email) {
-        phoneErr.innerText = "Please fill in all fields";
-        phoneInput.classList.add("error");
-        return;
-    }
-    if (!/^\d{10}$/.test(phone)) {
-        phoneInput.classList.add("error");
-        phoneErr.innerText = "Please enter a valid 10-digit phone number";
-        return;
-    }
-    if (!/^.+@.+\..+$/.test(email)) {
-        emailInput.classList.add("error");
-        phoneErr.innerText = "Please enter a valid email address";
-        return;
-    }
-
-    isSubmitting = true;
-    submitBtn.disabled = true;
-
-    // 前置查询匹配手机号
-    const existUser = await findUserByPhone(phone);
-    if (existUser) {
-        showOldGroupModal(existUser.tg_group_url);
-        unlockBtn();
-        return;
-    }
-
-    // 新用户随机分配群组
-    const randomIdx = Math.floor(Math.random() * TELEGRAM_GROUPS.length);
-    targetTgLink = TELEGRAM_GROUPS[randomIdx];
-
-    try {
-        const postRes = await fetch(API_URL, {
-            method: "POST",
-            headers: getBaseHeaders(),
-            body: JSON.stringify({
-                name,
-                phone,
-                email,
-                tg_group_url: targetTgLink
-            })
-        });
-
-        // 捕获409手机号冲突
-        if (postRes.status === 409) {
-            const retryUser = await findUserByPhone(phone);
-            if (retryUser) {
-                showOldGroupModal(retryUser.tg_group_url);
-            } else {
-                showRepeatTipModal();
-            }
-            unlockBtn();
-            return;
-        }
-
-        if (postRes.ok) {
-            showNewSuccessModal();
-        } else {
-            phoneErr.innerText = "Submission failed, please try again later";
-            phoneInput.classList.add("error");
-        }
-    } catch {
-        phoneErr.innerText = "Network error, check your internet";
-        phoneInput.classList.add("error");
-    }
-
-    unlockBtn();
+.hero-text {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  text-align: center;
+  width: 90%;
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+}
+.hero-text .logo {
+  font-size: 64px;
+  color: #ffffff;
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+.hero-text .slogan {
+  font-size: 26px;
+  font-weight: 400;
+  color: #ffffff;
+  margin-bottom: 8px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+.hero-text .cashback {
+  font-size: 20px;
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
 
-// TG跳转按钮
-document.getElementById("goToTgBtn").onclick = function () {
-    if (targetTgLink) window.open(targetTgLink, "_blank");
-};
-
-// 滚动到表单
-function scrollToForm() {
-    document.getElementById("form").scrollIntoView({ behavior: "smooth" });
+/* ========== Join Now 按钮 ========== */
+.scroll-indicator {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  z-index: 11;
+  transform: translateX(-50%);
+  cursor: pointer;
+}
+.hero-btn {
+  display: inline-block;
+  padding: 12px 24px;
+  background: var(--brand-blue);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.hero-btn:hover {
+  background: #0077ed;
 }
 
-// ========== 初次入场淡入动画（标题+卡片+表单全部保留） ==========
-function initAppleScrollAnim() {
-    const animElements = document.querySelectorAll('.title, .card, .form-card');
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting && !entry.target.classList.contains('in-view')) {
-                entry.target.classList.add('in-view');
-                observer.unobserve(entry.target);
-            }
-        });
-    }, {
-        threshold: 0.15,
-        rootMargin: '0px 0px -60px 0px'
-    });
-    animElements.forEach(el => observer.observe(el));
+/* ========== 布局容器 ========== */
+.bonus-section,
+.section,
+.form-section {
+  width: min(920px, 94%);
+  margin: 0 auto;
+}
+.bonus-section { margin-top: 60px; }
+.section { margin-top: 50px; }
+.form-section { margin-top: 70px; }
+
+/* ========== 标题（苹果滚动入场动效） ========== */
+.title {
+  text-align: center;
+  font-size: 36px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text-main);
+
+  opacity: 0;
+  transform: translateY(24px);
+  transition: 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+/* 核心修复：强制入场后永久可见，不受滚动视差行内样式覆盖 */
+.title.in-view {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
 }
 
-// ========== 视差滚动：仅Hero、title、card，表单完全排除 ==========
-function initGlobalParallax() {
-    const heroBox = document.querySelector('.hero-box');
-    const heroText = document.querySelector('.hero-text');
-    const parallaxItems = document.querySelectorAll('.title, .card');
+/* ========== 强制卡片正常间距 + 苹果同款入场动画 ========== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 30px 26px;
+  margin: 10px;
+  display: inline-block;
+  width: calc(50% - 22px);
+  vertical-align: top;
 
-    window.addEventListener('scroll', () => {
-        const scrollY = window.scrollY;
-
-        // Hero 缩放+文字上移淡出
-        if (heroBox) {
-            const heroHeight = heroBox.offsetHeight;
-            const progress = Math.min(scrollY / heroHeight, 1);
-            heroBox.style.transform = `scale(${1 - progress * 0.08})`;
-            if (heroText) {
-                heroText.style.opacity = 1 - progress * 1.1;
-                heroText.style.transform = `translateX(-50%) translateY(${progress * -80}px)`;
-            }
-        }
-
-        parallaxItems.forEach(item => {
-            const rect = item.getBoundingClientRect();
-            const winH = window.innerHeight;
-            // 仅元素在屏幕可视区间内执行视差
-            const inViewRange = rect.top < winH && rect.top > -rect.height * 0.6;
-            if (inViewRange) {
-                const progress = (winH - rect.top) / (winH + rect.height * 0.6);
-                const moveY = progress * -45;
-                const opacityVal = 1 - progress * 0.95;
-                item.style.opacity = opacityVal;
-                item.style.transform = `translateY(${moveY}px)`;
-            } else {
-                // 离开可视区恢复默认，依靠.in-view强制保持可见
-                item.style.opacity = '';
-                item.style.transform = '';
-            }
-        });
-    });
+  opacity: 0;
+  transform: translateY(32px);
+  transition: 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+/* 卡片依次错开延迟出场 */
+.card:nth-child(1) { transition-delay: 0.08s; }
+.card:nth-child(2) { transition-delay: 0.16s; }
+.card:nth-child(3) { transition-delay: 0.24s; }
+.card:nth-child(4) { transition-delay: 0.32s; }
+/* 动画激活类名，最高优先级 */
+.card.in-view {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
 }
 
-// 图片加载容错处理，解决网络慢空白问题
-function initImgFallback() {
-    const bannerImg = document.querySelector('.hero-img');
-    const heroWrap = document.querySelector('.hero-box');
-    if (!bannerImg || !heroWrap) return;
-
-    // 图片加载完成淡入
-    bannerImg.onload = () => {
-        bannerImg.classList.add('loaded');
-    };
-    // 图片加载失败保持渐变底色
-    bannerImg.onerror = () => {
-        heroWrap.style.background = 'linear-gradient(135deg, #e8e8ed, #f5f5f7)';
-    };
-    // 3秒超时兜底
-    setTimeout(() => {
-        if (!bannerImg.classList.contains('loaded')) {
-            heroWrap.style.background = 'linear-gradient(135deg, #e8e8ed, #f5f5f7)';
-        }
-    }, 3000);
+.card.green {
+  border-left: 3px solid var(--brand-blue);
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-    initAppleScrollAnim();
-    initGlobalParallax();
-    initImgFallback();
-});
+.card h3 {
+  font-size: 19px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.card p,
+.card li {
+  font-size: 15px;
+  color: var(--text-sub);
+  line-height: 1.5;
+}
+.card ul {
+  list-style: none;
+  margin-top: 10px;
+}
+.card li {
+  padding: 4px 0;
+}
+
+/* ========== 表单卡片 入场动画（无滚动视差） ========== */
+.form-card {
+  background: var(--bg-card);
+  padding: 48px 36px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  width: 100% !important;
+  margin: 0 auto !important;
+  display: block !important;
+
+  opacity: 0;
+  transform: translateY(28px);
+  transition: 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.form-card.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.form-card h2 {
+  text-align: center;
+  margin-bottom: 36px;
+  font-size: 28px;
+  font-weight: 500;
+}
+.form-card input {
+  width: 100%;
+  padding: 16px 18px;
+  margin-bottom: 8px;
+  background: #fff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  outline: none;
+}
+.form-card input:focus {
+  border-color: var(--brand-blue);
+}
+.form-card input.error {
+  border-color: #ff453a;
+}
+.error-text {
+  color: #ff453a;
+  font-size: 13px;
+  height: 18px;
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
+/* ========== 按钮 ========== */
+.submit-btn {
+  width: 100%;
+  padding: 16px;
+  background: var(--brand-blue);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 17px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+.submit-btn:hover {
+  background: #0077ed;
+}
+.submit-btn:disabled {
+  background: #004e99;
+  opacity: 0.65;
+}
+
+/* ========== 页脚 ========== */
+footer {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 13px;
+  color: var(--text-light);
+  border-top: 1px solid var(--border-light);
+  margin-top: 60px;
+}
+
+/* ========== 弹窗 ========== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+.modal-box {
+  background: #fff;
+  width: 90%;
+  max-width: 440px;
+  padding: 44px 36px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  text-align: center;
+}
+.modal-box h3 {
+  color: var(--brand-blue);
+  margin-bottom: 18px;
+  font-size: 24px;
+}
+.modal-box p {
+  color: var(--text-sub);
+  font-size: 17px;
+  line-height: 1.6;
+  margin-bottom: 34px;
+}
+.modal-btn {
+  background: var(--brand-blue);
+  color: #fff;
+  border: none;
+  padding: 15px 30px;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  cursor: pointer;
+}
+.modal-btn:hover {
+  background: #0077ed;
+}
+
+/* ========== 移动端 ========== */
+@media (max-width:920px) {
+  .hero-text .logo { font-size: 46px; }
+  .hero-text .slogan { font-size: 22px; }
+  .title { font-size: 28px; }
+  .card { width: 100%; margin: 8px 0; }
+  .form-card { padding: 36px 24px; }
+}
