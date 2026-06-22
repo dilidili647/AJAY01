@@ -1,4 +1,3 @@
-// ====================== 你原本的业务代码（完全不动）======================
 const API_URL = 'https://qfmyvgowvhzjpgormpyf.supabase.co/rest/v1/leads';
 const SUPABASE_KEY = 'sb_publishable_YHwXVJZyaFYJfx2pW7WCEg_EX4WlVc5';
 const TELEGRAM_GROUPS = [
@@ -97,7 +96,7 @@ async function submitData() {
     }
     if (!/^.+@.+\..+$/.test(email)) {
         emailInput.classList.add("error");
-        emailErr.innerText = "Please enter a valid email address";
+        phoneErr.innerText = "Please enter a valid email address";
         return;
     }
 
@@ -164,18 +163,64 @@ function scrollToForm() {
     document.getElementById("form").scrollIntoView({ behavior: "smooth" });
 }
 
-// ====================== 新增：苹果风卡片滚动滑入动效（不影响任何功能）======================
-function initCardAnimation() {
-    const cards = document.querySelectorAll('.card');
-    function check() {
-        cards.forEach(card => {
-            const rect = card.getBoundingClientRect();
-            if (rect.top < window.innerHeight - 100) {
-                card.classList.add('show');
+// ========== 初次入场淡入动画（标题+卡片+表单全部保留） ==========
+function initAppleScrollAnim() {
+    const animElements = document.querySelectorAll('.title, .card, .form-card');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && !entry.target.classList.contains('in-view')) {
+                entry.target.classList.add('in-view');
+                observer.unobserve(entry.target);
             }
         });
-    }
-    window.addEventListener('scroll', check);
-    window.addEventListener('load', check);
+    }, {
+        threshold: 0.15,
+        rootMargin: '0px 0px -60px 0px'
+    });
+    animElements.forEach(el => observer.observe(el));
 }
-initCardAnimation();
+
+// ========== 视差滚动：仅Hero、title、card，表单完全排除 ==========
+function initGlobalParallax() {
+    const heroBox = document.querySelector('.hero-box');
+    const heroText = document.querySelector('.hero-text');
+    const parallaxItems = document.querySelectorAll('.title, .card');
+
+    window.addEventListener('scroll', () => {
+        const scrollY = window.scrollY;
+
+        // Hero 缩放+文字上移淡出
+        if (heroBox) {
+            const heroHeight = heroBox.offsetHeight;
+            const progress = Math.min(scrollY / heroHeight, 1);
+            heroBox.style.transform = `scale(${1 - progress * 0.08})`;
+            if (heroText) {
+                heroText.style.opacity = 1 - progress * 1.1;
+                heroText.style.transform = `translateX(-50%) translateY(${progress * -80}px)`;
+            }
+        }
+
+        parallaxItems.forEach(item => {
+            const rect = item.getBoundingClientRect();
+            const winH = window.innerHeight;
+            // 仅元素在屏幕可视区间内执行视差
+            const inViewRange = rect.top < winH && rect.top > -rect.height * 0.6;
+            if (inViewRange) {
+                const progress = (winH - rect.top) / (winH + rect.height * 0.6);
+                const moveY = progress * -45;
+                const opacityVal = 1 - progress * 0.95;
+                item.style.opacity = opacityVal;
+                item.style.transform = `translateY(${moveY}px)`;
+            } else {
+                // 离开可视区恢复默认，依靠.in-view强制保持可见
+                item.style.opacity = '';
+                item.style.transform = '';
+            }
+        });
+    });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    initAppleScrollAnim();
+    initGlobalParallax();
+});
